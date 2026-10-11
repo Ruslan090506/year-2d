@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {calculate as calc,strategies as s} from '../dist/model.js';
+test('official worked example matches every principal subtotal',()=>{const r=calc(s[0]);assert.equal(r.gross,35200);assert.equal(r.bonus,1760);assert.equal(r.net,-3560);assert.equal(r.pool,3560);assert.equal(r.closing,71940);assert.equal(r.book,24500);});
+test('recommended 60,000 plan rounds posted lines and reconciles cash',()=>{const r=calc(s[1]);assert.equal(r.bonus,2691);assert.equal(r.tax,1713);assert.equal(r.net,15421);assert.equal(r.minimum,4000);assert.equal(r.closing,84796);assert.equal(r.cashFlow,r.net+r.depreciation-r.purchase+r.borrow-r.principal);});
+test('one sales block lost creates a loss, two blocks create substantial downside',()=>{assert.equal(calc({...s[1],allocation:50000}).net,-866);assert.equal(calc({...s[1],allocation:40000}).net,-18866);assert.equal(calc(s[1],20).sales,40000);});
+test('60,000 four-season loan pays principal and interest immediately',()=>{const r=calc({...s[1],borrow:60000,term:4});assert.equal(r.interest,6000);assert.equal(r.principal,15000);assert.equal(r.debt,45000);});
+test('positive season end does not excuse an advance funding gap',()=>{const r=calc({...s[1],milk:3.5,production:70000,requested:70000,allocation:70000});assert.ok(r.afterMarket<0);assert.ok(r.closing>0);});
+test('rules reject excess production, false allocation, insufficient spend and excessive debt',()=>{for(const patch of [{production:80000},{allocation:70000},{milk:0},{market:999},{requested:45000},{borrow:200001},{term:9}])assert.ok(calc({...s[1],...patch}).errors.length);});
+test('zero sales still pays minimum costs and creates no negative bonus or tax',()=>{const r=calc({...s[0],production:0,requested:0,allocation:0,milk:1});assert.equal(r.salary,10000);assert.equal(r.bonus,0);assert.equal(r.tax,0);assert.equal(r.transport,0);assert.equal(r.maintenance,1300);assert.equal(r.depreciation,3500);assert.equal(r.unusedMilk,1);});
